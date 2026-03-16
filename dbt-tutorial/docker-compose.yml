@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: dbt-postgres
+    environment:
+      POSTGRES_USER: dbtuser
+      POSTGRES_PASSWORD: dbtpass
+      POSTGRES_DB: ecommerce
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "dbtuser", "-d", "ecommerce"]
+      interval: 10s
+      retries: 5
+
+  dbt:
+    image: ghcr.io/dbt-labs/dbt-postgres:1.7.0
+    container_name: dbt-runner
+    volumes:
+      - ./dbt_project:/usr/app/dbt_project
+      - ./profiles:/root/.dbt
+    working_dir: /usr/app/dbt_project
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["tail", "-f", "/dev/null"]
+
+volumes:
+  postgres-data:
